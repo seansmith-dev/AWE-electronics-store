@@ -86,7 +86,7 @@ export class NavMenu extends Component {
               {/* Right side cart */}
               <div className="ms-auto">
                 <NavItem>
-                  <NavLink tag={Link} className="text-dark" to="/">
+                  <NavLink tag={Link} className="text-dark" to="/cart">
                     <div className="nav-link__container">
                       <form className="d-flex">
                         <button className="btn btn-outline-white" type="submit">

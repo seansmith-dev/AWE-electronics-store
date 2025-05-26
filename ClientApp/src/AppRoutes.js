@@ -2,6 +2,7 @@ import { Counter } from "./components/Counter";
 import { FetchData } from "./components/FetchData";
 import { Home } from "./components/Home";
 import { Shop } from "./components/pages/Shop/Shop";
+import { Cart} from "./components/pages/Cart/Cart.js"
 
 const AppRoutes = [
   {
@@ -11,6 +12,10 @@ const AppRoutes = [
   {
     path: '/shop',
     element: <Shop />
+  },
+  {
+    path: '/cart',
+    element: <Cart />
   },
   {
     path: '/counter',
