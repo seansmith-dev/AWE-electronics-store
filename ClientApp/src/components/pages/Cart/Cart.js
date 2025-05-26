@@ -5,6 +5,7 @@ import './Cart.css';
 import AddToCartButton from '../../Buttons/AddToCartButton.js'
 import { MdDelete } from "react-icons/md";
 import { FaMinus, FaPlus } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
 export class Cart extends Component {
     static displayName = Cart.name;
@@ -80,18 +81,16 @@ export class Cart extends Component {
                 </div>
 
                 <div className="cart-summary">
-                    <div class="cart-summary__container">
-                        <p class="cart-summary-heading">Subtotal:</p>
-                        <p class="cart-total">AU $1,599.98</p>
+                    <div className="cart-summary__container">
+                        <p className="cart-summary-heading">Subtotal:</p>
+                        <p className="cart-total">AU $1,599.98</p>
                     </div>
-                    <div class="cart-summary__container">
-                        <p class="cart-summary-heading">GST 10% Tax Rate:</p>
-                        <p class="cart-total">AU $145.45</p>
+                    <div className="cart-summary__container">
+                        <p className="cart-summary-heading">GST 10% Tax Rate:</p>
+                        <p className="cart-total">AU $145.45</p>
                     </div>
-                    <a href="./" class="checkout-btn">Checkout</a>
-                    
+                    <Link to="/checkout" className="checkout-btn">Checkout</Link>
                 </div>
-
             </div>
         );
     }

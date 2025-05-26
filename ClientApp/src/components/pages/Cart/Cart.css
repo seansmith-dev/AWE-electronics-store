@@ -98,15 +98,15 @@
     background-color: red; 
     color: white; 
     text-decoration: none; 
-    transition: transform 0.3s ease;
+    transition: transform 2s ease;
     
 
 }
 
 .checkout-btn:hover{
-    transform: scale(1.075);
+    transform: scale(1.01);
+    background-color: rgb(149, 4, 4); 
     color: white; 
-    background: black;
 }
 
 .cart-summary__container{
@@ -118,6 +118,7 @@
 .cart-summary__container > p.cart-summary-heading{
     font-weight: 700;
 }
+
 
 @media (max-width: 575px){
     .cart-summary, .cart-summary__container{

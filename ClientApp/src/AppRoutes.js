@@ -3,6 +3,8 @@ import { FetchData } from "./components/FetchData";
 import { Home } from "./components/Home";
 import { Shop } from "./components/pages/Shop/Shop";
 import { Cart} from "./components/pages/Cart/Cart.js"
+import { Checkout } from "./components/pages/Checkout/Checkout.js"
+import { PurchaseConfirmed } from "./components/pages/PurchaseConfirmed/PurchaseConfirmed.js"
 
 const AppRoutes = [
   {
@@ -16,6 +18,14 @@ const AppRoutes = [
   {
     path: '/cart',
     element: <Cart />
+  },
+  {
+    path: '/checkout',
+    element: <Checkout />
+  },
+  {
+    path: '/purchaseConfirmation',
+    element: <PurchaseConfirmed />
   },
   {
     path: '/counter',
