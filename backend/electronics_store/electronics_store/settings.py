@@ -76,11 +76,11 @@ WSGI_APPLICATION = 'electronics_store.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'your_database_name', #  'electronics_store_db'
-        'USER': 'your_postgres_user', #  'admin'
-        'PASSWORD': 'your_postgres_password',
+        'NAME': 'postgres', #  'electronics_store_db'
+        'USER': 'postgres', #  'admin'
+        'PASSWORD': 'postgres',
         'HOST': 'localhost', # PostgreSQL server IP/hostname
-        'PORT': '', # Default PostgreSQL port is 5432
+        'PORT': '5432', # Default PostgreSQL port is 5432
     }
 }
 
