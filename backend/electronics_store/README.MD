@@ -1,25 +1,62 @@
-install postgres https://www.enterprisedb.com/downloads/postgres-postgresql-downloads
+# AWE-electronics store
 
+Welcome to the AWE-electronics store project! Follow the steps below to set up the backend and start developing locally.
 
-run pip install -r requirements.txt while inside "electronics_store" folder
+---
 
+## 1. Install PostgreSQL & pgAdmin
 
-the setup installs pgAdmin as well, but to get the tables created inside your local database you must run the following
+- Download and install PostgreSQL and pgAdmin from:  
+  [https://www.enterprisedb.com/downloads/postgres-postgresql-downloads](https://www.enterprisedb.com/downloads/postgres-postgresql-downloads)
 
+---
+
+## 2. Install Python Requirements
+
+Navigate to the `electronics_store` folder and install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## 3. Set Up the Database
+
+After installing PostgreSQL and pgAdmin, you need to create the database tables:
+
+```bash
 python manage.py makemigrations shop
-
 python manage.py migrate
+```
 
-this is to be done anytime a model changes too, i will keep you updated anytime a model was changed
+> **Note:**  
+> Run these commands any time you are notified that a model has changed.
 
+---
 
-after running both commands and everything saying OK, run this:
+## 4. Create an Admin User
 
+To create a superuser for your local admin interface:
+
+```bash
 python manage.py createsuperuser
+```
 
-then fill in the username and password for your local admin user (email not necessary and admin for both is fine after all)
+- When prompted, set a username and password (using `admin` for both is fine, and you can skip the email).
 
+---
 
-then you can start the server with
+## 5. Start the Development Server
 
+Run the server with:
+
+```bash
 python manage.py runserver
+```
+
+---
+
+Let your team know if you change any models so they can re-run migrations!
+
+---
