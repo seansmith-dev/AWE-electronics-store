@@ -99,10 +99,3 @@ You should see a list of shopping carts. Each user has one cart, so you’ll lik
 - For development/testing only. Do not use these credentials in production.
 
 ---
-
-## Project Info
-
-- **Repository:** [AWE-electronics store](https://github.com/seansmith-dev/AWE-electronics-store)
-- **Languages:** Python, JavaScript, CSS, HTML, C#
-
-Enjoy testing your AWE Electronics Store backend!
