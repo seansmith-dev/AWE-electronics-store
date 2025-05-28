@@ -1,6 +1,6 @@
 # AWE-electronics store
 
-Welcome to the AWE-electronics store project! Follow the steps below to set up the backend and start developing locally.
+Follow the steps below to set up the backend and start developing locally.
 
 ---
 
