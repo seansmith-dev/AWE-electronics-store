@@ -6,7 +6,7 @@ Follow the steps below to set up the backend and start developing locally.
 
 ## 1. Install PostgreSQL & pgAdmin
 
-- Download and install PostgreSQL and pgAdmin from:  
+- Download and install PostgreSQL (with pgAdmin) from:  
   [https://www.enterprisedb.com/downloads/postgres-postgresql-downloads](https://www.enterprisedb.com/downloads/postgres-postgresql-downloads)
 
 ---
