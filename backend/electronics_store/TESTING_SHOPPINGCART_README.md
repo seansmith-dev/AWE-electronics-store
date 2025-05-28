@@ -48,7 +48,7 @@ You’ll get a JSON list of all items. Find the `id` for the item you want (e.g.
 The `CartItemViewSet` handles adding/updating cart items. If you add an item already in your cart, its quantity is updated; otherwise, a new cart item is created.
 
 - **Method:** `POST`
-- **URL:** `http://127.0.0.1:8000/api/cartitems/`
+- **URL:** `http://127.0.0.1:8000/api/cart-items/`
 - **Authentication:** Required (use your `test_customer` credentials)
 - **Headers:**
   - `Content-Type: application/json`
