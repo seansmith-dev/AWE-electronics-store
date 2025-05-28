@@ -26,9 +26,10 @@ If you’re using session-based authentication, you’ll need a CSRF token:
 
 - In your browser (e.g., Chrome):  
   Open Dev Tools → Application → Cookies for `http://127.0.0.1:8000/`.
-- Find the `csrftoken` cookie and copy its value.
-- In Postman, add a header:  
-  `X-CSRFToken: <your_token_here>`
+- Find the `csrftoken` cookie and `sessionid`, copy their values.
+- In Postman, add cookies like so:  
+  ![image](https://github.com/user-attachments/assets/565370c4-51da-4c90-9fc3-769057fff645)
+
 
 ---
 
