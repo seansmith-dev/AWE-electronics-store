@@ -57,7 +57,6 @@ class ItemViewSet(viewsets.ModelViewSet):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
     # Only authenticated users can write (update/create/delete), anyone can read.
-    # For a real store, 'staff' or 'admin' users would have write permissions.
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'highest_selling']:
             permission_classes = [permissions.AllowAny] # Publicly accessible for Browse
@@ -169,10 +168,6 @@ class CartItemViewSet(viewsets.ModelViewSet):
             cart_item = CartItem.objects.create(cart=cart, item=item, quantity=quantity)
             status_code = status.HTTP_201_CREATED # Created
 
-        # Optionally, you might update the item's quantity_available (local cache) here if managing stock directly
-        # item.quantity_available -= quantity
-        # item.save()
-        # However, your A2 states stock management is external, so this might be for display only.
 
         serializer = self.get_serializer(cart_item)
         return Response(serializer.data, status=status_code)
@@ -347,8 +342,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
              return Response({"detail": "You do not have permission to initiate this payment."}, status=status.HTTP_403_FORBIDDEN)
 
         # --- Simulate Payment Gateway Integration ---
-        # In a real system, you would make an API call to Stripe, PayPal, etc.
-        # This might involve redirecting the user or handling a webhook response.
+        
         # For assignment purposes, we'll just simulate a successful initiation.
 
         # Update payment status to processing or similar
@@ -461,9 +455,3 @@ class PerformanceMetricViewSet(viewsets.ReadOnlyModelViewSet):
         profitability_metrics = PerformanceMetric.objects.filter(metric_type='profitability')
         serializer = self.get_serializer(profitability_metrics, many=True)
         return Response(serializer.data)
-
-    # You could add other actions for specific metrics:
-    # @action(detail=False, methods=['get'])
-    # def total_sales_report(self, request):
-    #     # Logic to calculate and return total sales
-    #     pass

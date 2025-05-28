@@ -22,18 +22,14 @@ class User(AbstractUser):
     )
 
     class Meta:
-        # Add a related_name to avoid clashes if you also have a default User model somewhere
-        # This is good practice when overriding the default user model
         verbose_name = 'User'
         verbose_name_plural = 'Users'
-        db_table = 'auth_user_custom' # Optional: name your database table if you want
+        db_table = 'auth_user_custom'
 
     def __str__(self):
         return self.username
 
-# --- Remainder of your models.py (existing models) ---
 
-# Item Category for better organization (optional, but good practice)
 class ItemCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
@@ -169,7 +165,6 @@ class PaymentHistory(models.Model):
     customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payment_history')
     payment = models.ForeignKey(Payment, on_delete=models.CASCADE, related_name='history_records')
     transaction_date = models.DateTimeField(auto_now_add=True)
-    # You might add a field for payment_status_at_time_of_record if you want to track status changes
 
     class Meta:
         verbose_name_plural = "Payment Histories"

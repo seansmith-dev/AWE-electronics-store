@@ -19,10 +19,6 @@ class Command(BaseCommand):
                 Item.objects.all().delete()
                 ItemCategory.objects.all().delete()
                 PaymentMethod.objects.all().delete()
-                # Do NOT delete all users unless you're sure; this might delete your superuser.
-                # If you want to delete specific test users, do it carefully.
-                # For this script, we'll just create new ones or update existing if needed.
-
                 # --- 1. Create Item Categories ---
                 self.stdout.write('Creating Item Categories...')
                 electronics = ItemCategory.objects.create(name='Electronics', description='General electronic gadgets.')

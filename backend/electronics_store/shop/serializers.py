@@ -2,7 +2,6 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model # Correct way to get the active user model
 from .models import Item, ShoppingCart, CartItem, Order, OrderItem, Payment, PaymentMethod, Invoice, Receipt, PerformanceMetric, PaymentHistory # PaymentHistory added here
 
-# Get the custom User model defined in your app
 User = get_user_model()
 
 # --- Catalogue and Items ---
@@ -13,7 +12,7 @@ class ItemSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Item
-        fields = '__all__' # Includes all fields from your Item model for simplicity
+        fields = '__all__' 
         # Example for specific fields:
         # fields = ['item_id', 'item_name', 'item_short_description', 'item_type',
         #           'unit_price', 'quantity_available', 'is_available', 'image_url']
