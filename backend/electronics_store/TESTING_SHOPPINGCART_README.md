@@ -101,7 +101,10 @@ You should see a list of shopping carts. Each user has one cart, so you’ll lik
 - **Cookies:** Required (same as above)
 
   
-You should see a list of shopping carts. Each user has one cart, so you’ll likely see just one entry for `test_customer`, with a nested `items` array showing your cart items, quantities, and item details.
+You should get a response with the order placed like so:
+
+![image](https://github.com/user-attachments/assets/0c973277-dbde-45d0-8c97-b85e18ad96e7)
+
 
 ---
 
