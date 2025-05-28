@@ -93,6 +93,18 @@ You should see a list of shopping carts. Each user has one cart, so you’ll lik
 
 ---
 
+## 6. Place Order from items in cart
+
+- **Method:** `POST`
+- **URL:** `http://127.0.0.1:8000/api/place_order_from_cart/`
+- **Authentication:** Required (same as above)
+- **Cookies:** Required (same as above)
+
+  
+You should see a list of shopping carts. Each user has one cart, so you’ll likely see just one entry for `test_customer`, with a nested `items` array showing your cart items, quantities, and item details.
+
+---
+
 ## Notes
 
 - Make sure you have run the data population script to load items before testing.
