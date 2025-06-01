@@ -1,220 +1,143 @@
 import React, { Component } from 'react';
 import { BsStarFill } from 'react-icons/bs';
-import mobilePhone from '../assets/mobilePhone.webp';
+// import mobilePhone from '../assets/mobilePhone.webp'; // No longer needed, will use image_url from API
 import './Home.css';
-import AddToCartButton from './Buttons/AddToCartButton.js'
+import AddToCartButton from './Buttons/AddToCartButton.js';
 
 export class Home extends Component {
   static displayName = Home.name;
 
+  constructor(props) {
+    super(props);
+    this.state = {
+      products: [], // State to store fetched products
+      loading: true, // Loading indicator
+      error: null,   // Error message
+    };
+  }
+
+  componentDidMount() {
+    this.fetchProducts(); // Fetch products when the component mounts
+  }
+
+  /**
+   * Fetches product data from the Django API.
+   * You can adjust the API call here if you want to fetch only a subset
+   * of items or specific "featured" items (e.g., /api/items/highest_selling/).
+   */
+  async fetchProducts() {
+    try {
+      const response = await fetch('/api/items/'); // Fetch from your Django API
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`HTTP error! status: ${response.status} - ${JSON.stringify(errorData)}`);
+      }
+      const data = await response.json();
+      this.setState({ products: data, loading: false });
+    } catch (error) {
+      console.error("Failed to fetch products for Home page:", error);
+      this.setState({ error: error.message, loading: false });
+    }
+  }
+
+  /**
+   * Handles adding an item to the shopping cart.
+   * This function is similar to the one in Shop.js.
+   * @param {number} itemId - The ID of the item to add.
+   * @param {number} quantity - The quantity to add (defaulting to 1).
+   */
+  handleAddToCart = async (itemId, quantity = 1) => {
+    try {
+      const response = await fetch('/api/cart-items/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // IMPORTANT: For authenticated endpoints, you need to send credentials.
+          // If using Session Authentication (common in dev), browser handles cookies.
+          // If using Token Authentication, you'd add: 'Authorization': `Token YOUR_AUTH_TOKEN`
+          // For now, assuming session cookies are handled by the browser/proxy.
+        },
+        body: JSON.stringify({
+          item: itemId,
+          quantity: quantity,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.detail) {
+            throw new Error(`Failed to add to cart: ${errorData.detail}`);
+        }
+        throw new Error(`HTTP error! status: ${response.status} - ${JSON.stringify(errorData)}`);
+      }
+
+      const data = await response.json();
+      console.log('Item added to cart from Home:', data);
+      alert(`"${data.item_name}" added to cart! Quantity: ${data.quantity}`); // Using alert for simplicity, replace with custom UI
+    } catch (error) {
+      console.error("Error adding to cart from Home:", error);
+      alert(`Error adding to cart: ${error.message}`); // Using alert for simplicity
+    }
+  };
+
   render() {
+    const { products, loading, error } = this.state;
+
+    if (loading) {
+      return (
+        <div className="hero-container">
+          <h1>AWE Electronics</h1>
+          <p>Loading featured products...</p>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="hero-container">
+          <h1>AWE Electronics</h1>
+          <p style={{ color: 'red' }}>Error loading products: {error}</p>
+        </div>
+      );
+    }
+
     return (
-
       <div>
-
         <div className="hero-container">
           <h1>AWE Electronics</h1>
         </div>
         <section className="featured-products container grid-template">
-         
-          <div class="card-item">
-            <img src={mobilePhone} alt="featured item" class="card__img" />
-            <h3 class="card__item-title">Fancy Product</h3>
-            <div class="card__item-rating">
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
+          {products.map(product => (
+            <div className="card-item" key={product.item_id}>
+              {/* Use product.image_url from the API, with a fallback */}
+              <img
+                src={product.image_url || 'https://placehold.co/200x200/cccccc/ffffff?text=No+Image'}
+                alt={product.item_name}
+                className="card__img"
+                onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/200x200/cccccc/ffffff?text=No+Image'; }}
+              />
+              <h3 className="card__item-title">{product.item_name}</h3>
+              <div className="card__item-rating">
+                {/* Static stars for now, as rating is not in your model */}
+                <BsStarFill />
+                <BsStarFill />
+                <BsStarFill />
+                <BsStarFill />
+                <BsStarFill />
+              </div>
+              {/* Convert unit_price to float before calling toFixed */}
+              <p className="card__item-price">${parseFloat(product.unit_price).toFixed(2)}</p>
+              <AddToCartButton
+                className="btn--centering"
+                buttonSize="medium-small"
+                buttonWidth="super-slim"
+                buttonText="Add to Cart"
+                onClick={() => this.handleAddToCart(product.item_id)} // Pass item ID to handler
+              />
             </div>
-            <p class="card__item-price">$40.00 - $80.00</p>
-            <AddToCartButton className="btn--centering" buttonSize="medium-small" buttonWidth="super-slim" buttonText="Add to Cart"/>
-          </div>
-
-          <div class="card-item">
-            <img src={mobilePhone} alt="featured item" class="card__img" />
-            <h3 class="card__item-title">Fancy Product</h3>
-            <div class="card__item-rating">
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-            </div>
-            <p class="card__item-price">$40.00 - $80.00</p>
-            <AddToCartButton buttonSize="medium-small" buttonWidth="super-slim" buttonText="Add to Cart"/>
-          </div>
-          <div class="card-item">
-            <img src={mobilePhone} alt="featured item" class="card__img" />
-            <h3 class="card__item-title">Fancy Product</h3>
-            <div class="card__item-rating">
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-            </div>
-            <p class="card__item-price">$40.00 - $80.00</p>
-            <AddToCartButton buttonSize="medium-small" buttonWidth="super-slim" buttonText="Add to Cart"/>
-          </div>
-          <div class="card-item">
-            <img src={mobilePhone} alt="featured item" class="card__img" />
-            <h3 class="card__item-title">Fancy Product</h3>
-            <div class="card__item-rating">
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-            </div>
-            <p class="card__item-price">$40.00 - $80.00</p>
-            <AddToCartButton buttonSize="medium-small" buttonWidth="super-slim" buttonText="Add to Cart"/>
-          </div>
-          <div class="card-item">
-            <img src={mobilePhone} alt="featured item" class="card__img" />
-            <h3 class="card__item-title">Fancy Product</h3>
-            <div class="card__item-rating">
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-            </div>
-            <p class="card__item-price">$40.00 - $80.00</p>
-            <AddToCartButton buttonSize="medium-small" buttonWidth="super-slim" buttonText="Add to Cart"/>
-          </div>
-          <div class="card-item">
-            <img src={mobilePhone} alt="featured item" class="card__img" />
-            <h3 class="card__item-title">Fancy Product</h3>
-            <div class="card__item-rating">
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-              <BsStarFill />
-            </div>
-            <p class="card__item-price">$40.00 - $80.00</p>
-            <AddToCartButton buttonSize="medium-small" buttonWidth="super-slim" buttonText="Add to Cart"/>
-          </div>
+          ))}
         </section>
       </div>
-
-
-      // <div>
-      //   {/* Header */}
-      //   <header className="bg-dark py-5">
-      //     <div className="container px-4 px-lg-5 my-5">
-      //       <div className="text-center text-white">
-      //         <h1 className="display-4 fw-bolder">Shop in style</h1>
-      //         <p className="lead fw-normal text-white-50 mb-0">With this shop homepage template</p>
-      //       </div>
-      //     </div>
-      //   </header>
-
-      //   {/* Section */}
-      //   <section className="py-5">
-      //     <div className="container px-4 px-lg-5 mt-5">
-      //       <div className="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
-      //         {/* Product Card 1 */}
-      //         <div className="col mb-5">
-      //           <div className="card h-100">
-      //             <img className="card-img-top" src="https://dummyimage.com/450x300/dee2e6/6c757d.jpg" alt="..." />
-      //             <div className="card-body p-4">
-      //               <div className="text-center">
-      //                 <h5 className="fw-bolder">Fancy Product</h5>
-      //                 $40.00 - $80.00
-      //               </div>
-      //             </div>
-      //             <div className="card-footer p-4 pt-0 border-top-0 bg-transparent">
-      //               <div className="text-center">
-      //                 <a className="btn btn-outline-dark mt-auto" href="#">View options</a>
-      //               </div>
-      //             </div>
-      //           </div>
-      //         </div>
-
-      //         {/* Product Card 2 */}
-      //         <div className="col mb-5">
-      //           <div className="card h-100">
-      //             <div className="badge bg-dark text-white position-absolute" style={{ top: '0.5rem', right: '0.5rem' }}>Sale</div>
-      //             <img className="card-img-top" src="https://dummyimage.com/450x300/dee2e6/6c757d.jpg" alt="..." />
-      //             <div className="card-body p-4">
-      //               <div className="text-center">
-      //                 <h5 className="fw-bolder">Special Item</h5>
-      //                 <div className="d-flex justify-content-center small text-warning mb-2">
-      //                   <BsStarFill />
-      //                   <BsStarFill />
-      //                   <BsStarFill />
-      //                   <BsStarFill />
-      //                   <BsStarFill />
-      //                 </div>
-      //                 <span className="text-muted text-decoration-line-through">$20.00</span>
-      //                 $18.00
-      //               </div>
-      //             </div>
-      //             <div className="card-footer p-4 pt-0 border-top-0 bg-transparent">
-      //               <div className="text-center">
-      //                 <a className="btn btn-outline-dark mt-auto" href="#">Add to cart</a>
-      //               </div>
-      //             </div>
-      //           </div>
-      //         </div>
-
-      //         {/* Product Card 3 */}
-      //         <div className="col mb-5">
-      //           <div className="card h-100">
-      //             <div className="badge bg-dark text-white position-absolute" style={{ top: '0.5rem', right: '0.5rem' }}>Sale</div>
-      //             <img className="card-img-top" src="https://dummyimage.com/450x300/dee2e6/6c757d.jpg" alt="..." />
-      //             <div className="card-body p-4">
-      //               <div className="text-center">
-      //                 <h5 className="fw-bolder">Sale Item</h5>
-      //                 <span className="text-muted text-decoration-line-through">$50.00</span>
-      //                 $25.00
-      //               </div>
-      //             </div>
-      //             <div className="card-footer p-4 pt-0 border-top-0 bg-transparent">
-      //               <div className="text-center">
-      //                 <a className="btn btn-outline-dark mt-auto" href="#">Add to cart</a>
-      //               </div>
-      //             </div>
-      //           </div>
-      //         </div>
-
-      //         {/* Product Card 4 */}
-      //         <div className="col mb-5">
-      //           <div className="card h-100">
-      //             <img className="card-img-top" src="https://dummyimage.com/450x300/dee2e6/6c757d.jpg" alt="..." />
-      //             <div className="card-body p-4">
-      //               <div className="text-center">
-      //                 <h5 className="fw-bolder">Popular Item</h5>
-      //                 <div className="d-flex justify-content-center small text-warning mb-2">
-      //                   <BsStarFill />
-      //                   <BsStarFill />
-      //                   <BsStarFill />
-      //                   <BsStarFill />
-      //                   <BsStarFill />
-      //                 </div>
-      //                 $40.00
-      //               </div>
-      //             </div>
-      //             <div className="card-footer p-4 pt-0 border-top-0 bg-transparent">
-      //               <div className="text-center">
-      //                 <a className="btn btn-outline-dark mt-auto" href="#">Add to cart</a>
-      //               </div>
-      //             </div>
-      //           </div>
-      //         </div>
-      //       </div>
-      //     </div>
-      //   </section>
-
-      //   {/* Footer */}
-      //   <footer className="py-5 bg-dark">
-      //     <div className="container">
-      //       <p className="m-0 text-center text-white">Copyright &copy; AWE Electronics 2024</p>
-      //     </div>
-      //   </footer>
-      // </div>
     );
   }
 }
