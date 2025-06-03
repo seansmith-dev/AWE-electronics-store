@@ -37,22 +37,40 @@ export class Home extends Component {
     }
 
     /**
-     * Fetches product data from the Django API and ensures the csrftoken cookie is set.
+     * Fetches the CSRF token from /api-auth/login/ and then fetches product data.
+     * This leverages the known working mechanism for CSRF cookie setting.
      */
     async fetchProductsAndCsrfToken() {
         try {
-            // First, make a GET request to a Django endpoint to ensure csrftoken cookie is set.
-            // The /api/items/ endpoint is a good candidate as it's publicly accessible.
-            const response = await fetch('/api/items/', { credentials: 'include' });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`HTTP error! status: ${response.status} - ${JSON.stringify(errorData)}`);
+            // First, make a GET request to the DRF login endpoint to ensure csrftoken cookie is set.
+            // This endpoint is known to reliably set the CSRF cookie.
+            const csrfResponse = await fetch('/api-auth/login/'); // Proxy handles redirection to backend
+            if (!csrfResponse.ok) {
+                const errorData = await csrfResponse.json();
+                throw new Error(`Failed to initialize CSRF token: HTTP error! status: ${csrfResponse.status} - ${JSON.stringify(errorData)}`);
             }
-            const data = await response.json();
+            console.log('CSRF token fetch attempt from /api-auth/login/ completed.');
+
+            // Now, fetch the products
+            const productsResponse = await fetch('/api/items/'); // Proxy handles redirection to backend
+            
+            // *** DEBUG LOGS FOR HEADERS (for /api/items/ response) ***
+            console.log('--- Response Headers for /api/items/ (after CSRF fetch) ---');
+            console.log('All Response Headers:', productsResponse.headers);
+            console.log('Set-Cookie Header:', productsResponse.headers.get('Set-Cookie'));
+            console.log('--- End Response Headers ---');
+            // *** END DEBUG LOGS ***
+
+            if (!productsResponse.ok) {
+                const errorData = await productsResponse.json();
+                throw new Error(`HTTP error! status: ${productsResponse.status} - ${JSON.stringify(errorData)}`);
+            }
+            const data = await productsResponse.json();
             this.setState({ products: data, loading: false, csrfTokenReady: true });
-            console.log('Products fetched and CSRF token should be set.');
+            console.log('Products fetched.');
+            console.log('Cookies visible to JavaScript (document.cookie):', document.cookie); // Final check for cookies
         } catch (error) {
-            console.error("Failed to fetch products or CSRF token for Home page:", error);
+            console.error("Initialization error (products or CSRF token):", error);
             this.setState({ error: error.message, loading: false, csrfTokenReady: false });
         }
     }
@@ -67,8 +85,7 @@ export class Home extends Component {
         // Ensure CSRF token is ready before attempting to add to cart
         if (!this.state.csrfTokenReady) {
             alert('The page is still initializing. Please wait a moment and try again. If the issue persists, refresh the page.');
-            // Optionally, re-attempt fetching the token
-            this.fetchProductsAndCsrfToken();
+            this.fetchProductsAndCsrfToken(); // Try fetching again
             return;
         }
 
@@ -86,7 +103,6 @@ export class Home extends Component {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken, // Include the CSRF token for POST requests
                 },
-                credentials: 'include', // Send session cookies (including sessionid and csrftoken)
                 body: JSON.stringify({
                     item: itemId,
                     quantity: quantity,
@@ -103,11 +119,9 @@ export class Home extends Component {
 
             const data = await response.json();
             console.log('Item added to cart from Home:', data);
-            // Replace alert with a more user-friendly notification system in a real app
             alert(`"${data.item_name}" added to cart! Quantity: ${data.quantity}`);
         } catch (error) {
             console.error("Error adding to cart from Home:", error);
-            // Replace alert with a more user-friendly notification system in a real app
             alert(`Error adding to cart: ${error.message}`);
         }
     };
@@ -115,7 +129,7 @@ export class Home extends Component {
     render() {
         const { products, loading, error, csrfTokenReady } = this.state;
 
-        if (loading || !csrfTokenReady) { // Show loading until products and CSRF token are ready
+        if (loading || !csrfTokenReady) {
             return (
                 <div className="hero-container">
                     <h1>AWE Electronics</h1>
@@ -142,7 +156,6 @@ export class Home extends Component {
                 <section className="featured-products container grid-template">
                     {products.map(product => (
                         <div className="card-item" key={product.item_id}>
-                            {/* Use product.image_url from the API, with a fallback */}
                             <img
                                 src={product.image_url || 'https://placehold.co/200x200/cccccc/ffffff?text=No+Image'}
                                 alt={product.item_name}
@@ -151,21 +164,19 @@ export class Home extends Component {
                             />
                             <h3 className="card__item-title">{product.item_name}</h3>
                             <div className="card__item-rating">
-                                {/* Static stars for now, as rating is not in your model */}
                                 <BsStarFill />
                                 <BsStarFill />
                                 <BsStarFill />
                                 <BsStarFill />
                                 <BsStarFill />
                             </div>
-                            {/* Convert unit_price to float before calling toFixed */}
                             <p className="card__item-price">${parseFloat(product.unit_price).toFixed(2)}</p>
                             <AddToCartButton
                                 className="btn--centering"
                                 buttonSize="medium-small"
                                 buttonWidth="super-slim"
                                 buttonText="Add to Cart"
-                                onClick={() => this.handleAddToCart(product.item_id)} // Pass item ID to handler
+                                onClick={() => this.handleAddToCart(product.item_id)}
                             />
                         </div>
                     ))}

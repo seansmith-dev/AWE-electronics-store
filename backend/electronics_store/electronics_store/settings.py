@@ -20,18 +20,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+# Retaining the original SECRET_KEY as provided by the user.
 SECRET_KEY = 'django-insecure-%_fh=d220^t3=&38c*(wt38s9rlk5a4ntpsp0d5yx%&vk-3xa2'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = True # Keep this True for development
 
-ALLOWED_HOSTS = []
+# *** ADDED/UPDATED: ALLOWED_HOSTS for local development ***
+# This is crucial even if DEBUG is True, for robustness and clarity.
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'corsheaders',
+    'corsheaders', # Keep this at the top for CORS to work correctly
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -43,8 +46,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware', # Moved CorsMiddleware to be very early
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -79,9 +82,9 @@ WSGI_APPLICATION = 'electronics_store.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres2', #  'electronics_store_db'
-        'USER': 'postgres', #  'admin'
-        'PASSWORD': 'postgres',
+        'NAME': 'postgres2', # Your current database name
+        'USER': 'postgres', # Your PostgreSQL username
+        'PASSWORD': 'postgres', # Your PostgreSQL password
         'HOST': 'localhost', # PostgreSQL server IP/hostname
         'PORT': '5432', # Default PostgreSQL port is 5432
     }
@@ -128,6 +131,7 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'shop.User' # Tell Django to use custom User model
+
 # For development (allows all origins)
 CORS_ALLOW_ALL_ORIGINS = False # Set to False for production, True for quick testing if needed
 CORS_ALLOWED_ORIGINS = [
@@ -145,6 +149,19 @@ CSRF_TRUSTED_ORIGINS = [
     # Add any other origins where your frontend might be hosted
 ]
 
-# For development, you might relax SameSite, but 'Lax' is generally secure and works with credentials: 'include'
+# *** CRITICAL FIX FOR CSRF COOKIE ACCESSIBILITY ***
+# Set to None for development to allow localhost and 127.0.0.1 to share cookies.
+# This tells Django to set the cookie for the host that served the page,
+# which helps when frontend is on localhost:3000 and backend is on 127.0.0.1:8000.
+CSRF_COOKIE_DOMAIN = None
+SESSION_COOKIE_DOMAIN = None
+
+# Ensure SameSite is 'Lax' or 'None' (with Secure=True for 'None') for cross-site requests with credentials
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
+
+# IMPORTANT: Set CSRF_COOKIE_HTTPONLY to False for JavaScript to access the cookie
+# Remember to set this back to True in production for enhanced security.
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_NAME = "csrftoken"
+SESSION_COOKIE_NAME = "sessionid"
