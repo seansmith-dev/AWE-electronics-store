@@ -132,6 +132,7 @@ class Order(models.Model):
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     delivery_address = models.TextField(blank=True, null=True) # Final delivery address for the order
+    session_key = models.CharField(max_length=40, blank=True, null=True, db_index=True)
 
     class Meta:
         ordering = ['-order_date']
@@ -139,9 +140,12 @@ class Order(models.Model):
     def __str__(self):
         if self.customer:
             return f"Order {self.order_id} by {self.customer.username}"
-        elif self.customer_email:
+        if self.customer_email:
             return f"Order {self.order_id} by {self.customer_email}"
+        if self.session_key:
+            return f"Order {self.order_id} (Session {self.session_key[:8]})"
         return f"Order {self.order_id} (Anonymous)"
+
 
 
 class OrderItem(models.Model):
@@ -158,7 +162,7 @@ class OrderItem(models.Model):
         unique_together = ('order', 'item')
 
     def __str__(self):
-        return f"{self.quantity} x {self.item.item_name} in Order {self.order.id}"
+        return f"{self.quantity} x {self.item.item_name} in Order {self.order.order_id}"
 
 
 class PaymentMethod(models.Model):
@@ -192,7 +196,7 @@ class Payment(models.Model):
     payment_details = models.JSONField(blank=True, null=True) # For storing gateway response, last 4 digits of card, etc.
 
     def __str__(self):
-        return f"Payment for Order {self.order.id} - {self.status}"
+        return f"Payment for Order {self.order.order_id} - {self.status}"
 
 
 class PaymentHistory(models.Model):
@@ -211,7 +215,7 @@ class PaymentHistory(models.Model):
     status_change = models.CharField(max_length=50, null=True, blank=True)
 
     def __str__(self):
-        return f"Payment History for Order {self.order.id} - {self.status_change}"
+        return f"Payment History for Order {self.order.order_id} - {self.status_change}"
 
 
 class Invoice(models.Model):
@@ -227,7 +231,7 @@ class Invoice(models.Model):
     pdf_url = models.URLField(blank=True, null=True) # URL to the generated PDF invoice
 
     def __str__(self):
-        return f"Invoice {self.invoice_number} for Order {self.order.id}"
+        return f"Invoice {self.invoice_number} for Order {self.order.order_id}"
 
 
 class Receipt(models.Model):
@@ -241,7 +245,7 @@ class Receipt(models.Model):
     pdf_url = models.URLField(blank=True, null=True) # URL to the generated PDF receipt
 
     def __str__(self):
-        return f"Receipt {self.receipt_number} for Order {self.order.id}"
+        return f"Receipt {self.receipt_number} for Order {self.order.order_id}"
 
 
 class PerformanceMetric(models.Model):

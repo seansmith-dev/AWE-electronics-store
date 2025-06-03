@@ -361,6 +361,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             customer=customer_instance, # Will be None for anonymous
             customer_email=customer_email, # Set email for anonymous
             total_amount=total_amount,
+            session_key=request.session.session_key,
             # For anonymous users, delivery_address might come from the request body
             # For authenticated users, it might come from request.user.delivery_address
             delivery_address=request.data.get('delivery_address', customer_instance.delivery_address if customer_instance else None)
@@ -400,10 +401,11 @@ class PaymentViewSet(viewsets.ModelViewSet):
             customer_email = self.request.query_params.get('customer_email')
             if session_key or customer_email:
                 return Payment.objects.filter(
-                    Q(order__shoppingcart__session_key=session_key, order__customer__isnull=True) | 
-                    Q(order__customer_email=customer_email)
+                    Q(order__customer__isnull=True, order__customer_email=customer_email) |
+                    Q(order__customer__isnull=True, order__session_key=session_key)
                 ).distinct().order_by('-transaction_date')
             return Payment.objects.none()
+
 
     @action(detail=True, methods=['post'])
     @transaction.atomic
@@ -421,39 +423,40 @@ class PaymentViewSet(viewsets.ModelViewSet):
         if request.user.is_authenticated:
             if not (request.user == payment_instance.customer or request.user.is_staff or request.user.is_superuser):
                 return Response({"detail": "You do not have permission to initiate this payment."}, status=status.HTTP_403_FORBIDDEN)
-        else: # Anonymous user
+        else:  # anonymous
             session_key = request.session.session_key
             if not session_key:
-                return Response({"detail": "Session not found. Cannot verify payment."}, status=status.HTTP_400_BAD_REQUEST)
-            # Ensure the order associated with the payment belongs to this anonymous session
-            # This logic needs to be careful: order might be linked by session_key or customer_email for anonymous
-            is_authorized_anon = False
-            if order.customer_email and order.customer_email == request.data.get('customer_email'):
-                is_authorized_anon = True
-            elif ShoppingCart.objects.filter(session_key=session_key, order=order).exists(): # Check if order was made from this session's cart
-                 is_authorized_anon = True
+                return Response({"detail": "Session not found."},
+                                status=status.HTTP_400_BAD_REQUEST)
 
-            if not is_authorized_anon:
-                return Response({"detail": "You do not have permission to initiate this payment."}, status=status.HTTP_403_FORBIDDEN)
+            is_authorized = (
+                (order.customer_email and
+                order.customer_email == request.data.get('customer_email')) or
+                (order.session_key == session_key)
+            )
+            if not is_authorized:
+                return Response({"detail": "You do not have permission to initiate this payment."},
+                                status=status.HTTP_403_FORBIDDEN)
+
 
 
         payment_instance.status = 'completed'
-        payment_instance.transaction_id = f"TXN-{order.id}-{request.user.id if request.user.is_authenticated else 'anon'}-{payment_instance.id}"
+        payment_instance.transaction_id = f"TXN-{order.order_id}-{request.user.id if request.user.is_authenticated else 'anon'}-{payment_instance.id}"
         payment_instance.amount_paid = order.total_amount
         payment_instance.save()
         order.status = 'paid'
         order.save()
 
         receipt, created_receipt = Receipt.objects.get_or_create(order=order, defaults={
-            'receipt_number': f"REC-{order.id}",
+            'receipt_number': f"REC-{order.order_id}",
             'total_amount': order.total_amount,
-            'pdf_url': f"/media/receipts/{order.id}.pdf"
+            'pdf_url': f"/media/receipts/{order.order_id}.pdf"
         })
         invoice, created_invoice = Invoice.objects.get_or_create(order=order, defaults={
-            'invoice_number': f"INV-{order.id}",
+            'invoice_number': f"INV-{order.order_id}",
             'total_amount': order.total_amount,
             'status': 'paid',
-            'pdf_url': f"/media/invoices/{order.id}.pdf"
+            'pdf_url': f"/media/invoices/{order.order_id}.pdf"
         })
 
         serializer = self.get_serializer(payment_instance)
