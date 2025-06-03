@@ -120,6 +120,7 @@ export class Home extends Component {
             const data = await response.json();
             console.log('Item added to cart from Home:', data);
             alert(`"${data.item_name}" added to cart! Quantity: ${data.quantity}`);
+            document.dispatchEvent(new Event('cart-updated'));
         } catch (error) {
             console.error("Error adding to cart from Home:", error);
             alert(`Error adding to cart: ${error.message}`);

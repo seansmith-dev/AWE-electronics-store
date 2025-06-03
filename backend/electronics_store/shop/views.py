@@ -2,62 +2,139 @@ from rest_framework import viewsets
 from rest_framework import permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
 from rest_framework import status
-from django.db import transaction
-from django.db.models import Sum
-from django.contrib.auth import get_user_model
-from django.contrib.sessions.backends.db import SessionStore # Import SessionStore
+from rest_framework.exceptions import ValidationError
 
+from django.db import transaction # For atomic operations
+from django.db.models import Sum # For aggregation in ItemViewSet
+from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate, login, logout # IMPORTANT: Import Django's auth functions
+from django.db.models import Q # For complex lookups in Order and Payment ViewSets
+
+# PaymentHistory added to the import list here
 from .models import Item, ShoppingCart, CartItem, Order, OrderItem, Payment, PaymentMethod, Invoice, Receipt, PerformanceMetric, PaymentHistory
+
 from .serializers import ItemSerializer, UserSerializer, ShoppingCartSerializer, CartItemSerializer, OrderSerializer, \
                         OrderItemSerializer, PaymentSerializer, PaymentMethodSerializer, InvoiceSerializer, ReceiptSerializer, \
                         PerformanceMetricSerializer, PaymentHistorySerializer
 
+# Get the custom User model
 User = get_user_model()
 
 # --- User Management (e.g., for Admin/Self-management) ---
 class UserViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows users to be viewed or edited.
+    Includes basic user registration/management capabilities.
+    Permissions will need to be refined: e.g., IsAdminUser for full management,
+    IsOwnerOrAdmin for self-management.
+    """
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
 
     def get_permissions(self):
-        if self.action == 'create':
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        - 'create' (signup) and 'login' actions: AllowAny
+        - 'current_user' and 'logout' actions: IsAuthenticated
+        - 'retrieve', 'update', 'partial_update', 'destroy' for specific user: IsAuthenticated (ideally IsOwnerOrAdmin)
+        - 'list' (all users): IsAdminUser
+        """
+        if self.action == 'create' or self.action == 'login':
             permission_classes = [permissions.AllowAny]
-        elif self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
+        elif self.action == 'current_user' or self.action == 'logout':
             permission_classes = [permissions.IsAuthenticated]
-        else:
+        elif self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
+            # For individual user actions, ensure authenticated.
+            # In a real app, you'd add a custom permission to ensure user can only modify their own profile.
+            permission_classes = [permissions.IsAuthenticated]
+        else: # Default for 'list' (all users)
             permission_classes = [permissions.IsAdminUser]
         return [permission() for permission in permission_classes]
+
+    @action(detail=False, methods=['post'])
+    def login(self, request):
+        """
+        Custom action to handle user login and set session cookies.
+        """
+        username = request.data.get('username')
+        password = request.data.get('password')
+
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            login(request, user) # This sets the session cookie
+            serializer = self.get_serializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({'detail': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post']) # permission_classes handled by get_permissions
+    def logout(self, request):
+        """
+        Custom action to handle user logout and clear session.
+        Requires authentication (handled by get_permissions).
+        """
+        logout(request)
+        return Response({'detail': 'Successfully logged out.'}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get']) # permission_classes handled by get_permissions
+    def current_user(self, request):
+        """
+        Returns the currently authenticated user's details.
+        Requires authentication (handled by get_permissions).
+        """
+        if request.user.is_authenticated:
+            serializer = self.get_serializer(request.user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            # This branch should ideally not be reached if get_permissions works correctly,
+            # but it's a good fallback for explicit clarity.
+            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 # --- Catalogue and Items ---
 class ItemViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint that allows items (products) to be viewed or edited.
+    Scenario 1: Customer Browses Catalogue.
+    Scenario 2: Admin Updates Stockroom and Catalogue.
+    """
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'highest_selling']:
-            permission_classes = [permissions.AllowAny]
+            permission_classes = [permissions.AllowAny] # Publicly accessible for browsing
         else:
-            permission_classes = [permissions.IsAdminUser]
+            permission_classes = [permissions.IsAdminUser] # Only admins can create/update/delete items
         return [permission() for permission in permission_classes]
 
     @action(detail=False, methods=['get'])
     def highest_selling(self, request):
+        """
+        Custom action to get the highest selling items.
+        (Analytic/Performance Metric related, Scenario 5).
+        """
+        # This aggregates quantities from all historical OrderItems for each item
+        # and orders them by total quantity sold.
         highest_selling_items = Item.objects.annotate(
             total_sold=Sum('orderitem__quantity')
-        ).order_by('-total_sold').exclude(total_sold__isnull=True)[:10]
+        ).order_by('-total_sold').exclude(total_sold__isnull=True)[:10] # Get top 10, exclude items never sold
         serializer = self.get_serializer(highest_selling_items, many=True)
         return Response(serializer.data)
 
 
 # --- Shopping Cart ---
 class ShoppingCartViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing shopping carts.
+    Users can retrieve their own cart.
+    Scenario 1: Customer Adds Items to Shopping Cart. (Handled more specifically by CartItemViewSet)
+    """
     queryset = ShoppingCart.objects.all()
     serializer_class = ShoppingCartSerializer
-    # Allow unauthenticated users to create/retrieve their own cart based on session
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.AllowAny] # Allow unauthenticated users to create/retrieve their own cart based on session
 
     def get_queryset(self):
         """
@@ -88,14 +165,18 @@ class ShoppingCartViewSet(viewsets.ModelViewSet):
             # Ensure a session exists for anonymous users
             if not self.request.session.session_key:
                 self.request.session.save() # Generate a session key if it doesn't exist
-            serializer.save(session_key=self.request.session.session_key)
+            serializer.save(session_key=self.request.session.session_key, customer=None) # Ensure customer is None for anonymous
 
 
 class CartItemViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing individual items within a shopping cart.
+    This is where users add, update, or remove items from their cart.
+    Scenario 1: Customer Adds Items to Shopping Cart.
+    """
     queryset = CartItem.objects.all()
     serializer_class = CartItemSerializer
-    # Allow unauthenticated users to modify cart items
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.AllowAny] # Allow unauthenticated users to modify cart items
 
     def get_queryset(self):
         """
@@ -112,10 +193,15 @@ class CartItemViewSet(viewsets.ModelViewSet):
                 return CartItem.objects.filter(cart__session_key=session_key, cart__customer__isnull=True)
             return CartItem.objects.none()
 
-    @transaction.atomic
+    @transaction.atomic # Ensures all database operations are completed or rolled back
     def create(self, request, *args, **kwargs):
+        """
+        Custom logic for adding an item to the cart.
+        If item exists, update quantity; otherwise, create new cart item.
+        Also, ensure item availability before adding.
+        """
         item_id = request.data.get('item')
-        quantity = int(request.data.get('quantity', 1))
+        quantity = int(request.data.get('quantity', 1)) # Default to 1 if not provided
 
         if not item_id:
             return Response({"item": "This field is required."}, status=status.HTTP_400_BAD_REQUEST)
@@ -128,6 +214,7 @@ class CartItemViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Item not found or not available."}, status=status.HTTP_404_NOT_FOUND)
 
         if item.quantity_available < quantity:
+            # Use the imported ValidationError from rest_framework.exceptions
             raise ValidationError(
                 f"Not enough stock for {item.item_name}. Available: {item.quantity_available}, Requested: {quantity}"
             )
@@ -138,30 +225,33 @@ class CartItemViewSet(viewsets.ModelViewSet):
         else:
             # Ensure a session exists for anonymous users
             if not request.session.session_key:
-                request.session.save()
+                request.session.save() # Generate a session key if it doesn't exist
             session_key = request.session.session_key
             cart, created_cart = ShoppingCart.objects.get_or_create(
-                session_key=session_key, customer__isnull=True,
-                defaults={'session_key': session_key} # Ensure session_key is set for new cart
+                session_key=session_key, customer__isnull=True, # Ensure we only get/create anonymous carts
+                defaults={'session_key': session_key, 'customer': None} # Ensure customer is None for new anonymous cart
             )
-            # If a cart exists for this session but has a customer, it means the user logged in.
-            # In a real app, you'd merge carts here. For now, we assume anonymous carts are separate.
-            if cart.customer: # If this cart somehow got a customer, it's not truly anonymous anymore
+            # IMPORTANT: If a cart exists for this session but has a customer, it means the user logged in
+            # and this anonymous cart should ideally be merged or ignored.
+            # For now, we assume anonymous carts are separate and this logic prevents adding to a logged-in cart via anonymous session.
+            if cart.customer:
                 return Response({"detail": "This session is associated with a logged-in user's cart. Please log in to manage your cart."}, status=status.HTTP_400_BAD_REQUEST)
 
 
         cart_item_qs = CartItem.objects.filter(cart=cart, item=item)
         if cart_item_qs.exists():
+            # If item exists, update its quantity
             cart_item = cart_item_qs.first()
             cart_item.quantity += quantity
             cart_item.save()
-            status_code = status.HTTP_200_OK
+            status_code = status.HTTP_200_OK # Updated
         else:
+            # If item does not exist, create a new CartItem
             cart_item = CartItem.objects.create(cart=cart, item=item, quantity=quantity, unit_price=item.unit_price) # Set unit_price explicitly
-            status_code = status.HTTP_201_CREATED
+            status_code = status.HTTP_201_CREATED # Created
 
         serializer = self.get_serializer(cart_item)
-        return Response(serializer.data, status=status_code)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @transaction.atomic
     def update(self, request, *args, **kwargs):
@@ -199,8 +289,7 @@ class CartItemViewSet(viewsets.ModelViewSet):
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all().order_by('-order_date')
     serializer_class = OrderSerializer
-    # Allow unauthenticated users to place orders via place_order_from_cart
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.AllowAny] # Allow unauthenticated users to place orders via place_order_from_cart
 
     def get_queryset(self):
         if self.request.user.is_staff or self.request.user.is_superuser:
@@ -212,10 +301,12 @@ class OrderViewSet(viewsets.ModelViewSet):
             # For anonymous users, filter orders by session_key or customer_email
             session_key = self.request.session.session_key
             customer_email = self.request.query_params.get('customer_email') # Allow filtering by email
-            if session_key:
-                return Order.objects.filter(Q(payment__order__cart__session_key=session_key) | Q(customer_email=customer_email)).order_by('-order_date')
-            elif customer_email:
-                return Order.objects.filter(customer_email=customer_email).order_by('-order_date')
+            # Use Q objects for OR conditions
+            if session_key or customer_email:
+                return Order.objects.filter(
+                    Q(customer__isnull=True, customer_email=customer_email) | 
+                    Q(customer__isnull=True, shoppingcart__session_key=session_key)
+                ).distinct().order_by('-order_date')
             return Order.objects.none()
 
 
@@ -290,8 +381,7 @@ class PaymentMethodViewSet(viewsets.ReadOnlyModelViewSet):
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
-    # Allow unauthenticated users to initiate payments for their anonymous orders
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.AllowAny] # Allow unauthenticated users to initiate payments for their anonymous orders
 
     def get_queryset(self):
         if self.request.user.is_staff or self.request.user.is_superuser:
@@ -303,10 +393,11 @@ class PaymentViewSet(viewsets.ModelViewSet):
             # For anonymous users, filter payments by order associated with session_key or customer_email
             session_key = self.request.session.session_key
             customer_email = self.request.query_params.get('customer_email')
-            if session_key:
-                return Payment.objects.filter(order__cart__session_key=session_key, order__customer__isnull=True)
-            elif customer_email:
-                return Payment.objects.filter(order__customer_email=customer_email).order_by('-transaction_date')
+            if session_key or customer_email:
+                return Payment.objects.filter(
+                    Q(order__shoppingcart__session_key=session_key, order__customer__isnull=True) | 
+                    Q(order__customer_email=customer_email)
+                ).distinct().order_by('-transaction_date')
             return Payment.objects.none()
 
     @action(detail=True, methods=['post'])
@@ -330,27 +421,34 @@ class PaymentViewSet(viewsets.ModelViewSet):
             if not session_key:
                 return Response({"detail": "Session not found. Cannot verify payment."}, status=status.HTTP_400_BAD_REQUEST)
             # Ensure the order associated with the payment belongs to this anonymous session
-            if not (order.customer_email == request.data.get('customer_email') and ShoppingCart.objects.filter(session_key=session_key, items__cart__order=order).exists()):
-                 return Response({"detail": "You do not have permission to initiate this payment."}, status=status.HTTP_403_FORBIDDEN)
+            # This logic needs to be careful: order might be linked by session_key or customer_email for anonymous
+            is_authorized_anon = False
+            if order.customer_email and order.customer_email == request.data.get('customer_email'):
+                is_authorized_anon = True
+            elif ShoppingCart.objects.filter(session_key=session_key, order=order).exists(): # Check if order was made from this session's cart
+                 is_authorized_anon = True
+
+            if not is_authorized_anon:
+                return Response({"detail": "You do not have permission to initiate this payment."}, status=status.HTTP_403_FORBIDDEN)
 
 
         payment_instance.status = 'completed'
-        payment_instance.transaction_id = f"TXN-{order.order_id}-{request.user.id if request.user.is_authenticated else 'anon'}-{payment_instance.id}"
+        payment_instance.transaction_id = f"TXN-{order.id}-{request.user.id if request.user.is_authenticated else 'anon'}-{payment_instance.id}"
         payment_instance.amount_paid = order.total_amount
         payment_instance.save()
         order.status = 'paid'
         order.save()
 
         receipt, created_receipt = Receipt.objects.get_or_create(order=order, defaults={
-            'receipt_number': f"REC-{order.order_id}",
+            'receipt_number': f"REC-{order.id}",
             'total_amount': order.total_amount,
-            'pdf_url': f"/media/receipts/{order.order_id}.pdf"
+            'pdf_url': f"/media/receipts/{order.id}.pdf"
         })
         invoice, created_invoice = Invoice.objects.get_or_create(order=order, defaults={
-            'invoice_number': f"INV-{order.order_id}",
+            'invoice_number': f"INV-{order.id}",
             'total_amount': order.total_amount,
             'status': 'paid',
-            'pdf_url': f"/media/invoices/{order.order_id}.pdf"
+            'pdf_url': f"/media/invoices/{order.id}.pdf"
         })
 
         serializer = self.get_serializer(payment_instance)
