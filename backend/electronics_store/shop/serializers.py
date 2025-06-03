@@ -26,21 +26,20 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'username', 'email', 'first_name', 'last_name',
+            'id', 'username', 'email','password', 'first_name', 'last_name',
             'phone_number', 'delivery_address', 'user_type'
         ]
         read_only_fields = ['user_type'] # User type is usually managed by the system/admin, not user input via this API
         extra_kwargs = {
-            'password': {'write_only': True, 'required': False} # Allow password to be written, but not read
+            'password': {'write_only': True} # Allow password to be written, but not read
         }
 
     def create(self, validated_data):
         # Custom create method to handle password hashing
-        password = validated_data.pop('password', None)
+        password = validated_data.pop('password')
         user = User.objects.create(**validated_data)
-        if password is not None:
-            user.set_password(password)
-            user.save()
+        user.set_password(password)
+        user.save()
         return user
 
     def update(self, instance, validated_data):

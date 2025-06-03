@@ -101,7 +101,8 @@ export class Login extends Component {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
+                const errorData = await response.json();        // <= peek at this
+                console.log(errorData);                    // usually {"detail": "Invalid credentials"}
                 // Check if the error is specifically about CSRF token
                 if (response.status === 403 && errorData.detail && errorData.detail.includes('CSRF Failed')) {
                     throw new Error('Login failed: CSRF token missing or incorrect. Please ensure you have cookies enabled and refresh the page if needed.');
