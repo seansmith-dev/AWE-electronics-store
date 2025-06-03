@@ -79,7 +79,7 @@ WSGI_APPLICATION = 'electronics_store.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres', #  'electronics_store_db'
+        'NAME': 'postgres2', #  'electronics_store_db'
         'USER': 'postgres', #  'admin'
         'PASSWORD': 'postgres',
         'HOST': 'localhost', # PostgreSQL server IP/hostname
@@ -129,4 +129,22 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'shop.User' # Tell Django to use custom User model
 # For development (allows all origins)
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False # Set to False for production, True for quick testing if needed
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000", # Your React frontend's development URL
+    "http://127.0.0.1:8000", # Also include 127.0.0.1 for consistency
+    # Add any other origins where your frontend might be hosted
+]
+CORS_ALLOW_CREDENTIALS = True # VERY IMPORTANT: Allows cookies (including session and CSRF) to be sent cross-origin
+
+# CSRF SETTINGS
+# Ensure these are set to allow your frontend to interact
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:8000",
+    # Add any other origins where your frontend might be hosted
+]
+
+# For development, you might relax SameSite, but 'Lax' is generally secure and works with credentials: 'include'
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax'

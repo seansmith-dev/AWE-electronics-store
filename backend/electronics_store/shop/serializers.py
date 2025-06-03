@@ -31,119 +31,140 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['user_type'] # User type is usually managed by the system/admin, not user input via this API
         extra_kwargs = {
-            'password': {'write_only': True, 'required': False} # Password should not be read and is not always required for update
+            'password': {'write_only': True, 'required': False} # Allow password to be written, but not read
         }
 
     def create(self, validated_data):
-        # Handle password creation for new users
-        user = User.objects.create_user(**validated_data)
+        # Custom create method to handle password hashing
+        password = validated_data.pop('password', None)
+        user = User.objects.create(**validated_data)
+        if password is not None:
+            user.set_password(password)
+            user.save()
         return user
 
     def update(self, instance, validated_data):
-        # Handle password update separately if provided
-        if 'password' in validated_data:
-            instance.set_password(validated_data.pop('password'))
-        return super().update(instance, validated_data)
+        # Custom update method to handle password hashing if provided
+        password = validated_data.pop('password', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password is not None:
+            instance.set_password(password)
+        instance.save()
+        return instance
 
 
 # --- Shopping Cart ---
-class CartItemSerializer(serializers.ModelSerializer):
+class CartItemNestedSerializer(serializers.ModelSerializer):
     """
-    Serializer for items within a shopping cart.
-    Allows adding/updating quantity of a specific item in a cart.
-    Includes read-only fields for item details for convenience.
+    Nested serializer for CartItem, used within ShoppingCartSerializer.
+    Includes details of the associated Item.
     """
-    # These fields provide details about the item directly from the related Item model
+    item_id = serializers.IntegerField(source='item.item_id', read_only=True)
     item_name = serializers.CharField(source='item.item_name', read_only=True)
-    unit_price = serializers.DecimalField(source='item.unit_price', max_digits=10, decimal_places=2, read_only=True)
+    item_short_description = serializers.CharField(source='item.item_short_description', read_only=True)
+    image_url = serializers.URLField(source='item.image_url', read_only=True)
 
     class Meta:
         model = CartItem
-        fields = ['id', 'item', 'item_name', 'unit_price', 'quantity']
-        # 'item' field is writeable (for adding/updating a cart item entry)
-        # 'item_name' and 'unit_price' are read-only for display purposes
+        fields = ['id', 'item', 'item_id', 'item_name', 'item_short_description', 'quantity', 'unit_price', 'image_url']
+        read_only_fields = ['unit_price'] # unit_price is set automatically on save of CartItem
+
 
 class ShoppingCartSerializer(serializers.ModelSerializer):
     """
     Serializer for the ShoppingCart model.
-    Includes nested serialization for CartItems, showing content of the cart.
+    Includes nested CartItemSerializer to show items in the cart.
     """
-    # 'items' corresponds to the related_name='items' in CartItem model
-    items = CartItemSerializer(many=True, read_only=True)
+    items = CartItemNestedSerializer(many=True, read_only=True)
     customer_username = serializers.CharField(source='customer.username', read_only=True)
+    # Add session_key for anonymous carts
+    session_key = serializers.CharField(read_only=True)
 
     class Meta:
         model = ShoppingCart
-        fields = ['id', 'customer', 'customer_username', 'created_date', 'items']
-        read_only_fields = ['customer', 'created_date'] # Customer is typically associated automatically (e.g., by request.user)
+        # Include session_key in fields
+        fields = ['id', 'customer', 'customer_username', 'session_key', 'items', 'created_at', 'updated_at']
+        read_only_fields = ['customer', 'session_key'] # Customer and session_key are set by the view
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    """
+    Serializer for individual CartItem operations (add, update, delete).
+    """
+    item_name = serializers.CharField(source='item.item_name', read_only=True)
+    # Ensure cart is writable for creation, but can be read-only for updates
+    cart = serializers.PrimaryKeyRelatedField(queryset=ShoppingCart.objects.all(), required=False)
+
+
+    class Meta:
+        model = CartItem
+        fields = ['id', 'cart', 'item', 'item_name', 'quantity', 'unit_price']
+        read_only_fields = ['unit_price'] # unit_price is set automatically on save of CartItem
+
 
 # --- Orders ---
 class OrderItemSerializer(serializers.ModelSerializer):
     """
-    Serializer for individual items within an order.
-    Captures the price at the time of order for historical accuracy.
+    Serializer for OrderItem, used nested within OrderSerializer.
     """
     item_name = serializers.CharField(source='item.item_name', read_only=True)
 
     class Meta:
         model = OrderItem
         fields = ['id', 'item', 'item_name', 'quantity', 'unit_price_at_time_of_order']
-        # 'unit_price_at_time_of_order' is set by the system when the order is placed, not by client
-        read_only_fields = ['unit_price_at_time_of_order']
+
 
 class OrderSerializer(serializers.ModelSerializer):
     """
     Serializer for the Order model.
-    Includes nested OrderItem serializers to show what's in the order.
+    Includes nested OrderItemSerializer to show items in the order.
     """
-    # 'order_items' corresponds to the related_name='order_items' in OrderItem model
-    order_items = OrderItemSerializer(many=True, read_only=True)
+    items = OrderItemSerializer(many=True, read_only=True)
     customer_username = serializers.CharField(source='customer.username', read_only=True)
+    # Include customer_email for anonymous orders
+    customer_email = serializers.EmailField(required=False, allow_blank=True)
 
     class Meta:
         model = Order
-        fields = ['id', 'customer', 'customer_username', 'order_date', 'total_amount', 'status', 'delivery_address', 'order_items']
-        # These fields are typically set by the system during order creation/processing
-        read_only_fields = ['customer', 'total_amount', 'order_date']
+        # Include customer_email in fields
+        fields = ['order_id', 'customer', 'customer_username', 'customer_email', 'order_date', 'total_amount', 'status', 'delivery_address', 'items']
+        read_only_fields = ['customer', 'order_date', 'total_amount', 'status', 'items'] # customer can be null, but not directly set by API for creation
 
-# --- Payments, Payment History, Receipts, Invoices ---
+
+# --- Payments, Invoices, Receipts ---
 class PaymentMethodSerializer(serializers.ModelSerializer):
     """
     Serializer for PaymentMethod.
-    Often read-only as payment methods are predefined.
     """
     class Meta:
         model = PaymentMethod
         fields = '__all__'
 
+
 class PaymentSerializer(serializers.ModelSerializer):
     """
     Serializer for Payment transactions.
-    Details status and link to order.
     """
     order_id = serializers.IntegerField(source='order.id', read_only=True)
     customer_username = serializers.CharField(source='customer.username', read_only=True)
 
     class Meta:
         model = Payment
-        fields = [
-            'id', 'order', 'order_id', 'customer', 'customer_username',
-            'payment_method', 'transaction_id', 'amount_paid', 'payment_date', 'status'
-        ]
-        # These fields are usually set by the payment gateway or system processes
-        read_only_fields = ['transaction_id', 'amount_paid', 'payment_date', 'status', 'customer', 'order']
+        fields = ['id', 'order', 'order_id', 'customer', 'customer_username', 'payment_method', 'transaction_id', 'amount_paid', 'transaction_date', 'status', 'payment_details']
+        read_only_fields = ['transaction_id', 'amount_paid', 'transaction_date', 'status', 'payment_details']
+
 
 class PaymentHistorySerializer(serializers.ModelSerializer):
     """
-    Serializer for PaymentHistory records.
-    Links to specific payments and customer.
+    Serializer for PaymentHistory.
     """
-    payment_details = PaymentSerializer(read_only=True, source='payment')
-    customer_username = serializers.CharField(source='customer.username', read_only=True)
+    order_id = serializers.IntegerField(source='order.id', read_only=True)
+    customer_username = serializers.CharField(source='customer.username', read_only=True) # Expose customer username
 
     class Meta:
         model = PaymentHistory
-        fields = ['id', 'customer', 'customer_username', 'payment', 'payment_details', 'transaction_date']
+        fields = ['id', 'order', 'order_id', 'customer', 'customer_username', 'payment', 'payment_details', 'transaction_date', 'status_change']
         read_only_fields = ['customer', 'payment', 'transaction_date']
 
 
@@ -175,9 +196,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
 class PerformanceMetricSerializer(serializers.ModelSerializer):
     """
     Serializer for Performance Metrics.
-    Often read-only, used for analytics display.
     """
     class Meta:
         model = PerformanceMetric
         fields = '__all__'
-        read_only_fields = ['calculated_at']

@@ -3,8 +3,12 @@ import { FetchData } from "./components/FetchData";
 import { Home } from "./components/Home";
 import { Shop } from "./components/pages/Shop/Shop";
 import { Cart} from "./components/pages/Cart/Cart.js"
-import { Checkout } from "./components/pages/Checkout/Checkout.js"
-import { PurchaseConfirmed } from "./components/pages/PurchaseConfirmed/PurchaseConfirmed.js"
+// Import the wrapper components for Checkout and PurchaseConfirmed
+import CheckoutWrapper from "./components/pages/Checkout/Checkout.js"
+import PurchaseConfirmedWrapper from "./components/pages/PurchaseConfirmed/PurchaseConfirmed.js"
+// Import the new Login and Signup wrapper components
+import LoginWrapper from "./components/pages/Auth/Login.js";
+import SignupWrapper from "./components/pages/Auth/Signup.js";
 
 const AppRoutes = [
   {
@@ -21,11 +25,11 @@ const AppRoutes = [
   },
   {
     path: '/checkout',
-    element: <Checkout />
+    element: <CheckoutWrapper /> // Use the wrapper component here
   },
   {
     path: '/purchaseConfirmation',
-    element: <PurchaseConfirmed />
+    element: <PurchaseConfirmedWrapper /> // Use the wrapper component here
   },
   {
     path: '/counter',
@@ -34,6 +38,14 @@ const AppRoutes = [
   {
     path: '/fetch-data',
     element: <FetchData />
+  },
+  {
+    path: '/login', // New route for the Login page
+    element: <LoginWrapper />
+  },
+  {
+    path: '/signup', // New route for the Signup page
+    element: <SignupWrapper />
   }
 ];
 

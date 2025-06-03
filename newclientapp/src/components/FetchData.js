@@ -37,7 +37,7 @@ export class FetchData extends Component {
             <tr key={item.item_id}>
               <td>{item.item_id}</td>
               <td>{item.item_name}</td>
-              <td>${item.unit_price.toFixed(2)}</td> {/* Format price to 2 decimal places */}
+              <td>${parseFloat(item.unit_price).toFixed(2)}</td> {/* Format price to 2 decimal places */}
               <td>{item.quantity_available}</td>
               <td>{item.is_available ? 'Yes' : 'No'}</td>
               <td>

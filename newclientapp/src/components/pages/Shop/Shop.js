@@ -127,7 +127,7 @@ export class Shop extends Component {
                 <BsStarFill />
                 <BsStarFill />
               </div>
-              <p className="card__item-price">${product.unit_price.toFixed(2)}</p>
+              <p className="card__item-price">${parseFloat(product.unit_price).toFixed(2)}</p>
               {/* Pass the item ID to the AddToCartButton */}
               <AddToCartButton
                 className="btn--centering"

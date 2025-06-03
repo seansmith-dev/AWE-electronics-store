@@ -1,7 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.contrib.auth import get_user_model
-from shop.models import ItemCategory, Item, PaymentMethod, User # Import your models
+# Ensure all necessary models are imported
+from shop.models import ItemCategory, Item, PaymentMethod, ShoppingCart, CartItem, Order, OrderItem, Payment, PaymentHistory, Invoice, Receipt
 
 class Command(BaseCommand):
     help = 'Populates the database with sample data for ItemCategories, Items, Users, and PaymentMethods.'
@@ -15,10 +16,23 @@ class Command(BaseCommand):
         try:
             with transaction.atomic():
                 # --- Clear existing data (optional, but good for clean testing) ---
-                self.stdout.write('Clearing existing data (Items, Categories, Users, PaymentMethods)...')
+                # Clear in reverse order of dependencies to avoid integrity errors
+                self.stdout.write('Clearing existing data...')
+                Receipt.objects.all().delete()
+                Invoice.objects.all().delete()
+                PaymentHistory.objects.all().delete()
+                Payment.objects.all().delete()
+                OrderItem.objects.all().delete()
+                Order.objects.all().delete()
+                CartItem.objects.all().delete()
+                ShoppingCart.objects.all().delete() # Clear shopping carts
                 Item.objects.all().delete()
                 ItemCategory.objects.all().delete()
                 PaymentMethod.objects.all().delete()
+                CustomUser.objects.filter(username__in=['test_customer', 'test_admin']).delete() # Only delete sample users
+                self.stdout.write(self.style.SUCCESS('Existing data cleared.'))
+
+
                 # --- 1. Create Item Categories ---
                 self.stdout.write('Creating Item Categories...')
                 electronics = ItemCategory.objects.create(name='Electronics', description='General electronic gadgets.')
@@ -32,42 +46,76 @@ class Command(BaseCommand):
                 item1 = Item.objects.create(
                     item_name="Dell XPS 15",
                     item_short_description="High-performance laptop for professionals.",
-                    item_type="Laptop",
-                    category=laptops,
+                    # Corrected: item_type is now a ForeignKey to ItemCategory
+                    item_type=laptops, # Assign the ItemCategory object directly
                     unit_price=1500.00,
                     quantity_available=50,
                     is_available=True,
-                    image_url="http://example.com/dell_xps_15.jpg"
+                    image_url="https://placehold.co/400x300/E0E0E0/333333?text=Dell+XPS+15"
                 )
                 item2 = Item.objects.create(
                     item_name="iPhone 15 Pro",
                     item_short_description="Latest iPhone with advanced camera and A17 Bionic chip.",
-                    item_type="Smartphone",
-                    category=smartphones,
+                    item_type=smartphones, # Assign the ItemCategory object directly
                     unit_price=1200.00,
                     quantity_available=100,
                     is_available=True,
-                    image_url="http://example.com/iphone_15_pro.jpg"
+                    image_url="https://placehold.co/400x300/E0E0E0/333333?text=iPhone+15+Pro"
                 )
                 item3 = Item.objects.create(
                     item_name="Sony WH-1000XM5 Headphones",
                     item_short_description="Industry-leading noise-canceling headphones.",
-                    item_type="Headphones",
-                    category=accessories,
+                    item_type=accessories, # Assign the ItemCategory object directly
                     unit_price=350.00,
                     quantity_available=200,
                     is_available=True,
-                    image_url="http://example.com/sony_headphones.jpg"
+                    image_url="https://placehold.co/400x300/E0E0E0/333333?text=Sony+Headphones"
                 )
                 item4 = Item.objects.create(
                     item_name="Samsung 4K Smart TV",
                     item_short_description="55-inch UHD Smart TV with vibrant colors.",
-                    item_type="Television",
-                    category=electronics,
+                    item_type=electronics, # Assign the ItemCategory object directly
                     unit_price=800.00,
                     quantity_available=30,
                     is_available=True,
-                    image_url="http://example.com/samsung_tv.jpg"
+                    image_url="https://placehold.co/400x300/E0E0E0/333333?text=Samsung+TV"
+                )
+                # Added more items for variety
+                item5 = Item.objects.create(
+                    item_name="Apple Watch Series 9",
+                    item_short_description="Advanced smartwatch for health and fitness.",
+                    item_type=accessories,
+                    unit_price=400.00,
+                    quantity_available=75,
+                    is_available=True,
+                    image_url="https://placehold.co/400x300/E0E0E0/333333?text=Apple+Watch"
+                )
+                item6 = Item.objects.create(
+                    item_name="MacBook Air M3",
+                    item_short_description="Thin, light, and powerful laptop for everyday use.",
+                    item_type=laptops,
+                    unit_price=1100.00,
+                    quantity_available=40,
+                    is_available=True,
+                    image_url="https://placehold.co/400x300/E0E0E0/333333?text=MacBook+Air"
+                )
+                item7 = Item.objects.create(
+                    item_name="Google Pixel 8",
+                    item_short_description="Smart and secure smartphone with Tensor G3.",
+                    item_type=smartphones,
+                    unit_price=700.00,
+                    quantity_available=90,
+                    is_available=True,
+                    image_url="https://placehold.co/400x300/E0E0E0/333333?text=Google+Pixel"
+                )
+                item8 = Item.objects.create(
+                    item_name="Logitech MX Master 3S",
+                    item_short_description="Advanced wireless mouse for productivity.",
+                    item_type=accessories,
+                    unit_price=100.00,
+                    quantity_available=150,
+                    is_available=True,
+                    image_url="https://placehold.co/400x300/E0E0E0/333333?text=Logitech+Mouse"
                 )
                 self.stdout.write(self.style.SUCCESS('Items created.'))
 
@@ -111,9 +159,10 @@ class Command(BaseCommand):
 
                 # --- 4. Create Payment Methods ---
                 self.stdout.write('Creating Payment Methods...')
-                PaymentMethod.objects.create(method_name='Credit Card', description='Visa/MasterCard/Amex')
-                PaymentMethod.objects.create(method_name='PayPal', description='Online payment gateway')
-                PaymentMethod.objects.create(method_name='Bank Transfer', description='Direct bank transfer')
+                # Corrected: Use 'name' field as per models.py
+                PaymentMethod.objects.create(name='Credit Card', description='Visa/MasterCard/Amex')
+                PaymentMethod.objects.create(name='PayPal', description='Online payment gateway')
+                PaymentMethod.objects.create(name='Bank Transfer', description='Direct bank transfer')
                 self.stdout.write(self.style.SUCCESS('Payment Methods created.'))
 
                 self.stdout.write(self.style.SUCCESS('Database population complete!'))
