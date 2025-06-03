@@ -104,7 +104,7 @@ class ItemViewSet(viewsets.ModelViewSet):
     serializer_class = ItemSerializer
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve', 'highest_selling']:
+        if self.action in ['list', 'retrieve', 'highest_selling', 'featured']:
             permission_classes = [permissions.AllowAny] # Publicly accessible for browsing
         else:
             permission_classes = [permissions.IsAdminUser] # Only admins can create/update/delete items
@@ -123,7 +123,12 @@ class ItemViewSet(viewsets.ModelViewSet):
         ).order_by('-total_sold').exclude(total_sold__isnull=True)[:10] # Get top 10, exclude items never sold
         serializer = self.get_serializer(highest_selling_items, many=True)
         return Response(serializer.data)
-
+    
+    @action(detail=False, methods=['get'])
+    def featured(self, request):
+        featured_qs = Item.objects.filter(is_featured=True, is_available=True)
+        serializer = self.get_serializer(featured_qs, many=True)
+        return Response(serializer.data)
 
 # --- Shopping Cart ---
 class ShoppingCartViewSet(viewsets.ModelViewSet):

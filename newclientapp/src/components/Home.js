@@ -52,14 +52,7 @@ export class Home extends Component {
             console.log('CSRF token fetch attempt from /api-auth/login/ completed.');
 
             // Now, fetch the products
-            const productsResponse = await fetch('/api/items/'); // Proxy handles redirection to backend
-            
-            // *** DEBUG LOGS FOR HEADERS (for /api/items/ response) ***
-            console.log('--- Response Headers for /api/items/ (after CSRF fetch) ---');
-            console.log('All Response Headers:', productsResponse.headers);
-            console.log('Set-Cookie Header:', productsResponse.headers.get('Set-Cookie'));
-            console.log('--- End Response Headers ---');
-            // *** END DEBUG LOGS ***
+            const productsResponse = await fetch('/api/items/featured/'); // Proxy handles redirection to backend
 
             if (!productsResponse.ok) {
                 const errorData = await productsResponse.json();

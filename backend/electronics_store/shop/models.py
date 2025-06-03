@@ -53,6 +53,7 @@ class Item(models.Model):
     quantity_available = models.IntegerField(default=0)
     is_available = models.BooleanField(default=True)
     image_url = models.URLField(max_length=500, blank=True, null=True) # URL to product image
+    is_featured = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['item_name']

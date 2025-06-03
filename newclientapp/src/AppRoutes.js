@@ -1,7 +1,7 @@
 import { Counter } from "./components/Counter";
 import { FetchData } from "./components/FetchData";
 import { Home } from "./components/Home";
-import { Shop } from "./components/pages/Shop/Shop";
+import  Shop   from './components/pages/Shop/Shop';
 import { Cart} from "./components/pages/Cart/Cart.js"
 // Import the wrapper components for Checkout and PurchaseConfirmed
 import CheckoutWrapper from "./components/pages/Checkout/Checkout.js"

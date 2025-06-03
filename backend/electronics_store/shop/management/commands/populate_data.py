@@ -46,41 +46,44 @@ class Command(BaseCommand):
                 item1 = Item.objects.create(
                     item_name="Dell XPS 15",
                     item_short_description="High-performance laptop for professionals.",
-                    # Corrected: item_type is now a ForeignKey to ItemCategory
-                    item_type=laptops, # Assign the ItemCategory object directly
+                    item_type=laptops,
                     unit_price=1500.00,
                     quantity_available=50,
                     is_available=True,
+                    is_featured=True,                     # ★ FEATURED
                     image_url="https://placehold.co/400x300/E0E0E0/333333?text=Dell+XPS+15"
                 )
                 item2 = Item.objects.create(
                     item_name="iPhone 15 Pro",
                     item_short_description="Latest iPhone with advanced camera and A17 Bionic chip.",
-                    item_type=smartphones, # Assign the ItemCategory object directly
+                    item_type=smartphones,
                     unit_price=1200.00,
                     quantity_available=100,
                     is_available=True,
+                    is_featured=True,                     # ★ FEATURED
                     image_url="https://placehold.co/400x300/E0E0E0/333333?text=iPhone+15+Pro"
                 )
                 item3 = Item.objects.create(
                     item_name="Sony WH-1000XM5 Headphones",
                     item_short_description="Industry-leading noise-canceling headphones.",
-                    item_type=accessories, # Assign the ItemCategory object directly
+                    item_type=accessories,
                     unit_price=350.00,
                     quantity_available=200,
                     is_available=True,
+                    is_featured=True,                     # ★ FEATURED
                     image_url="https://placehold.co/400x300/E0E0E0/333333?text=Sony+Headphones"
                 )
                 item4 = Item.objects.create(
                     item_name="Samsung 4K Smart TV",
                     item_short_description="55-inch UHD Smart TV with vibrant colors.",
-                    item_type=electronics, # Assign the ItemCategory object directly
+                    item_type=electronics,
                     unit_price=800.00,
                     quantity_available=30,
                     is_available=True,
+                    is_featured=True,                     # ★ FEATURED
                     image_url="https://placehold.co/400x300/E0E0E0/333333?text=Samsung+TV"
                 )
-                # Added more items for variety
+                # Non-featured examples
                 item5 = Item.objects.create(
                     item_name="Apple Watch Series 9",
                     item_short_description="Advanced smartwatch for health and fitness.",
@@ -88,6 +91,7 @@ class Command(BaseCommand):
                     unit_price=400.00,
                     quantity_available=75,
                     is_available=True,
+                    is_featured=False,                    # not featured
                     image_url="https://placehold.co/400x300/E0E0E0/333333?text=Apple+Watch"
                 )
                 item6 = Item.objects.create(
@@ -97,6 +101,7 @@ class Command(BaseCommand):
                     unit_price=1100.00,
                     quantity_available=40,
                     is_available=True,
+                    is_featured=False,
                     image_url="https://placehold.co/400x300/E0E0E0/333333?text=MacBook+Air"
                 )
                 item7 = Item.objects.create(
@@ -106,6 +111,7 @@ class Command(BaseCommand):
                     unit_price=700.00,
                     quantity_available=90,
                     is_available=True,
+                    is_featured=False,
                     image_url="https://placehold.co/400x300/E0E0E0/333333?text=Google+Pixel"
                 )
                 item8 = Item.objects.create(
@@ -115,9 +121,11 @@ class Command(BaseCommand):
                     unit_price=100.00,
                     quantity_available=150,
                     is_available=True,
+                    is_featured=False,
                     image_url="https://placehold.co/400x300/E0E0E0/333333?text=Logitech+Mouse"
                 )
                 self.stdout.write(self.style.SUCCESS('Items created.'))
+
 
                 # --- 3. Create Users (Customer & Admin) ---
                 self.stdout.write('Creating Users...')

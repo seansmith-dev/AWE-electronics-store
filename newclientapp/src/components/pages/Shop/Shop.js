@@ -1,104 +1,116 @@
+// src/components/pages/Shop/Shop.js
 import React, { Component } from 'react';
 import { BsStarFill } from 'react-icons/bs';
-// import mobilePhone from '../../../assets/mobilePhone.webp'; // No longer needed, will use image_url from API
-import './Shop.css'; // Assuming this CSS file contains necessary styling
-import AddToCartButton from '../../Buttons/AddToCartButton.js'; // Assuming this button component exists
+import './Shop.css';
+import AddToCartButton from '../../Buttons/AddToCartButton.js';
 
-export class Shop extends Component {
-  static displayName = Shop.name;
-
-  constructor(props) {
-    super(props);
-    this.state = {
-      products: [], // State to store fetched products
-      loading: true, // Loading indicator
-      error: null,   // Error message
-      // You might want to add a state for cart messages (e.g., "Item added to cart!")
-    };
-  }
-
-  componentDidMount() {
-    this.fetchProducts(); // Fetch products when the component mounts
-  }
-
-  /**
-   * Fetches product data from the Django API.
-   */
-  async fetchProducts() {
-    try {
-      const response = await fetch('/api/items/'); // Fetch from your Django API
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`HTTP error! status: ${response.status} - ${JSON.stringify(errorData)}`);
+/* ─── helper – read csrftoken cookie ────────────────────────────────────── */
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (const c of cookies) {
+      const cookie = c.trim();
+      if (cookie.substring(0, name.length + 1) === `${name}=`) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
       }
-      const data = await response.json();
-      this.setState({ products: data, loading: false });
-    } catch (error) {
-      console.error("Failed to fetch products:", error);
-      this.setState({ error: error.message, loading: false });
     }
   }
+  return cookieValue;
+}
 
-  /**
-   * Handles adding an item to the shopping cart.
-   * This function will be passed to the AddToCartButton component.
-   * @param {number} itemId - The ID of the item to add.
-   * @param {number} quantity - The quantity to add (defaulting to 1).
-   */
-  handleAddToCart = async (itemId, quantity = 1) => {
+export default class Shop extends Component {
+  static displayName = Shop.name;
+
+  state = {
+    products: [],
+    loading: true,
+    error: null,
+    csrfTokenReady: false,
+  };
+
+  componentDidMount() {
+    this.fetchProductsAndCsrfToken();
+  }
+
+  /* ─── 1. initialise CSRF cookie then get products ────────────────────── */
+  fetchProductsAndCsrfToken = async () => {
     try {
-      // Make a POST request to your Django cart-items endpoint
-      const response = await fetch('/api/cart-items/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // IMPORTANT: For authenticated endpoints, you need to send credentials.
-          // If using Session Authentication (common in dev), browser handles cookies.
-          // If using Token Authentication, you'd add: 'Authorization': `Token YOUR_AUTH_TOKEN`
-          // For now, assuming session cookies are handled by the browser/proxy.
-        },
-        body: JSON.stringify({
-          item: itemId,
-          quantity: quantity,
-        }),
-      });
+      /* Step 1 – hit Django login page so csrftoken cookie is set */
+      const csrfRes = await fetch('/api-auth/login/', { credentials: 'include' });
+      if (!csrfRes.ok) throw new Error(`CSRF init failed (${csrfRes.status})`);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        // Check for specific error messages from your Django backend
-        if (errorData.detail) {
-            throw new Error(`Failed to add to cart: ${errorData.detail}`);
-        }
-        throw new Error(`HTTP error! status: ${response.status} - ${JSON.stringify(errorData)}`);
+      /* Step 2 – fetch the full product list */
+      const prodRes = await fetch('/api/items/', { credentials: 'include' });
+      if (!prodRes.ok) {
+        const err = await prodRes.json();
+        throw new Error(`GET /api/items/ → ${prodRes.status}: ${JSON.stringify(err)}`);
       }
-
-      const data = await response.json();
-      console.log('Item added to cart:', data);
-      // You might want to add a visual feedback here, e.g., a toast notification
-      alert(`"${data.item_name}" added to cart! Quantity: ${data.quantity}`); // Using alert for simplicity, replace with custom UI
-    } catch (error) {
-      console.error("Error adding to cart:", error);
-      alert(`Error adding to cart: ${error.message}`); // Using alert for simplicity
+      const data = await prodRes.json();
+      this.setState({ products: data, loading: false, csrfTokenReady: true });
+    } catch (err) {
+      console.error(err);
+      this.setState({ error: err.message, loading: false, csrfTokenReady: false });
     }
   };
 
-  render() {
-    const { products, loading, error } = this.state;
+  /* ─── 2. Add-to-cart handler (fires cart-updated event) ──────────────── */
+  handleAddToCart = async (itemId, quantity = 1) => {
+    if (!this.state.csrfTokenReady) {
+      alert('Page still initialising. Please wait a moment and try again.');
+      return;
+    }
 
-    if (loading) {
+    const csrftoken = getCookie('csrftoken');
+    if (!csrftoken) {
+      alert('CSRF token not found. Refresh the page and ensure cookies are enabled.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/cart-items/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken,
+        },
+        credentials: 'include',
+        body: JSON.stringify({ item: itemId, quantity }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || `POST failed (${res.status})`);
+      }
+
+      const data = await res.json();
+      alert(`"${data.item_name}" added to cart! Quantity: ${data.quantity}`);
+      document.dispatchEvent(new Event('cart-updated'));  // refresh nav badge
+    } catch (err) {
+      console.error(err);
+      alert(`Add-to-cart failed: ${err.message}`);
+    }
+  };
+
+  /* ─── 3. render ──────────────────────────────────────────────────────── */
+  render() {
+    const { products, loading, error, csrfTokenReady } = this.state;
+
+    if (loading || !csrfTokenReady) {
       return (
-        <div className="container mt-5">
-          <h1 className="text-3xl font-bold mb-4">Our Products</h1>
-          <p>Loading products...</p>
+        <div className="hero-container">
+          <h1>All Products</h1>
+          <p>Loading catalogue…</p>
         </div>
       );
     }
 
     if (error) {
       return (
-        <div className="container mt-5">
-          <h1 className="text-3xl font-bold mb-4">Our Products</h1>
-          <p style={{ color: 'red' }}>Error loading products: {error}</p>
+        <div className="hero-container">
+          <h1>All Products</h1>
+          <p style={{ color: 'red' }}>Error: {error}</p>
         </div>
       );
     }
@@ -106,35 +118,38 @@ export class Shop extends Component {
     return (
       <div>
         <div className="hero-container background-image--none">
-          <h1>Our Products</h1>
+          <h1>All Products</h1>
         </div>
+
         <section className="featured-products container grid-template">
-          {products.map(product => (
-            <div className="card-item" key={product.item_id}>
-              {/* Use product.image_url from the API, with a fallback */}
+          {products.map(p => (
+            <div className="card-item" key={p.item_id}>
               <img
-                src={product.image_url || 'https://placehold.co/200x200/cccccc/ffffff?text=No+Image'}
-                alt={product.item_name}
+                src={p.image_url || 'https://placehold.co/200x200/cccccc/ffffff?text=No+Image'}
+                alt={p.item_name}
                 className="card__img"
-                onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/200x200/cccccc/ffffff?text=No+Image'; }}
+                onError={e => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = 'https://placehold.co/200x200/cccccc/ffffff?text=No+Image';
+                }}
               />
-              <h3 className="card__item-title">{product.item_name}</h3>
+
+              <h3 className="card__item-title">{p.item_name}</h3>
+
               <div className="card__item-rating">
-                {/* Static stars for now, as rating is not in your model */}
-                <BsStarFill />
-                <BsStarFill />
-                <BsStarFill />
-                <BsStarFill />
-                <BsStarFill />
+                {[...Array(5)].map((_, i) => (
+                  <BsStarFill key={i} />
+                ))}
               </div>
-              <p className="card__item-price">${parseFloat(product.unit_price).toFixed(2)}</p>
-              {/* Pass the item ID to the AddToCartButton */}
+
+              <p className="card__item-price">${parseFloat(p.unit_price).toFixed(2)}</p>
+
               <AddToCartButton
                 className="btn--centering"
                 buttonSize="medium-small"
                 buttonWidth="super-slim"
                 buttonText="Add to Cart"
-                onClick={() => this.handleAddToCart(product.item_id)} // Pass item ID to handler
+                onClick={() => this.handleAddToCart(p.item_id)}
               />
             </div>
           ))}

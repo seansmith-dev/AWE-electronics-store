@@ -93,6 +93,7 @@ export class Cart extends Component {
                 this.setState({ cart: null, loading: false });
                 this.calculateTotals([]); // No cart, so totals are zero
             }
+            document.dispatchEvent(new Event('cart-updated'));
 
         } catch (error) {
             console.error("Failed to fetch cart:", error);
@@ -187,6 +188,7 @@ export class Cart extends Component {
         }
 
         const cartItems = cart && cart.items ? cart.items : [];
+        const checkoutDisabled = cartItems.length === 0;
 
         return (
             <div className="container">
@@ -259,9 +261,15 @@ export class Cart extends Component {
                         {/* Convert total to float before calling toFixed */}
                         <p className="cart-total">AU ${parseFloat(total).toFixed(2)}</p>
                     </div>
-                    <Link to="/checkout" className="checkout-btn" disabled={cartItems.length === 0}>
-                        Checkout
-                    </Link>
+                    {checkoutDisabled ? (
+                        <button className="checkout-btn disabled" disabled>
+                            Checkout
+                        </button>
+                    ) : (
+                        <Link to="/checkout" className="checkout-btn">
+                            Checkout
+                        </Link>
+                    )}
                 </div>
             </div>
         );
