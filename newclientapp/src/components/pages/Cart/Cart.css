@@ -43,6 +43,23 @@
     word-break: break-word;
 }
 
+.cart-img{
+
+}
+
+.cart__img {
+    width: auto; 
+    height: 100%; 
+    object-fit: cover; 
+    border-radius: 8px; 
+    transition: transform 0.3s ease;
+}
+
+.cart__img:hover {
+    
+    transform: scale(1.05);
+}
+
 .item-total__container {
     display: flex; 
     flex-direction: row; 
