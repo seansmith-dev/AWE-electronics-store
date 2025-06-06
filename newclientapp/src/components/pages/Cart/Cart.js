@@ -210,7 +210,7 @@ export class Cart extends Component {
                                 <img
                                     src={cartItem.item.image_url || 'https://placehold.co/100x100/cccccc/ffffff?text=No+Image'}
                                     alt={cartItem.item.item_name}
-                                    className="card__img"
+                                    className="cart__img"
                                     onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/100x100/cccccc/ffffff?text=No+Image'; }}
                                 />
                                 <p className="item-name">{cartItem.item.item_name}</p>
