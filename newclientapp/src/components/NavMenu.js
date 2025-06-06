@@ -161,6 +161,9 @@ export class NavMenu extends Component {
                                         Welcome, {username}!
                                     </NavbarText>
                                     <NavItem>
+                                        <NavLink tag={Link} className="text-dark" to="/dashboard">Dashboard</NavLink>
+                                    </NavItem>
+                                    <NavItem>
                                         <NavLink className="text-dark" onClick={this.handleLogout} style={{ cursor: 'pointer' }}>
                                             Logout
                                         </NavLink>

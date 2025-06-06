@@ -3,6 +3,7 @@ import { FetchData } from "./components/FetchData";
 import { Home } from "./components/Home";
 import  Shop   from './components/pages/Shop/Shop';
 import { Cart} from "./components/pages/Cart/Cart.js"
+import Dashboard from "./components/pages/Dashboard/Dashboard.js"
 // Import the wrapper components for Checkout and PurchaseConfirmed
 import CheckoutWrapper from "./components/pages/Checkout/Checkout.js"
 import PurchaseConfirmedWrapper from "./components/pages/PurchaseConfirmed/PurchaseConfirmed.js"
@@ -46,6 +47,10 @@ const AppRoutes = [
   {
     path: '/signup', // New route for the Signup page
     element: <SignupWrapper />
+  },
+  {
+    path: '/dashboard', 
+    element: <Dashboard />
   }
 ];
 

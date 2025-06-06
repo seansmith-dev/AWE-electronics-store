@@ -1,0 +1,135 @@
+/* Dashboard Page Styles */
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.dashboard-title {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    color: #2C3E50;
+    font-size: 2rem;
+}
+
+.dashboard-welcome {
+    font-family: 'Poppins', sans-serif;
+    color: #4A5568;
+    margin-bottom: 2rem;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.dashboard-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+}
+
+.card-title {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    color: #2C3E50;
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.card-content {
+    font-family: 'Poppins', sans-serif;
+    color: #4A5568;
+    line-height: 1.6;
+}
+
+.order-history {
+    margin-top: 3rem;
+}
+
+.order-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.order-table th, .order-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #E2E8F0;
+    font-family: 'Poppins', sans-serif;
+}
+
+.order-table th {
+    font-weight: 600;
+    color: #2C3E50;
+    background-color: #F8FAFC;
+}
+
+.order-table tr:hover {
+    background-color: #F8FAFC;
+}
+
+.btn-dashboard {
+    padding: 0.5rem 1rem;
+    background-color: #E53E3E;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-dashboard:hover {
+    background-color: #C53030;
+}
+
+.user-info-section {
+    margin-bottom: 2rem;
+}
+
+.info-label {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    color: #4A5568;
+    margin-bottom: 0.5rem;
+}
+
+.info-value {
+    font-family: 'Poppins', sans-serif;
+    color: #2C3E50;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .dashboard-title {
+        margin-bottom: 1rem;
+    }
+    
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
